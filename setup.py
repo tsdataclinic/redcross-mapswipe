@@ -6,5 +6,8 @@ setup(
     version='0.1.0',
     description='Library of functions for mapswipe validate project analytics',
     author='Data Clinic',
-    install_requires=[],
+    install_requires=[
+        "libpysal",
+        "pandas",
+    ],
 )
