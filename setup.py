@@ -7,9 +7,10 @@ setup(
     description='Library of functions for mapswipe validate project analytics',
     author='Data Clinic',
     install_requires=[
-        "libpysal",
+        "pysal",
         "pandas",
         "h3",
         "geopandas",
+        "contextily",
     ],
 )
