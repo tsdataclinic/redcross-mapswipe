@@ -12,5 +12,6 @@ setup(
         "h3",
         "geopandas",
         "contextily",
+        "diskcache",
     ],
 )
