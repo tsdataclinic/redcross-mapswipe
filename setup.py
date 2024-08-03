@@ -13,5 +13,7 @@ setup(
         "geopandas",
         "contextily",
         "diskcache",
+        "folium",
+        "branca",
     ],
 )
