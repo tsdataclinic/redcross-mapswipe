@@ -13,6 +13,18 @@ def calc_moran_for_dist_debug(gdf_agg, col_name, dist_val):
     return esda.moran.Moran(gdf_agg[col_name], w)
 
 
+def calc_moran_for_dist_weighted(gdf_agg, col_name, dist_vals):
+    moran_vals = {}
+    # Project to UTM for distance calculation
+    gdf = gdf_agg.to_crs(gdf_agg.estimate_utm_crs())
+    for dist in dist_vals:
+        w = weights.DistanceBand.from_dataframe(gdf, threshold=dist, binary=False)
+        w.transform = "R"
+        moran = esda.moran.Moran(gdf_agg[col_name], w)
+        moran_vals[dist] = moran.I
+    return pd.DataFrame({"dist": list(moran_vals.keys()), "moran_i": [m for m in moran_vals.values()]}), None
+
+
 def calc_moran_for_dist(gdf_agg, col_name, dist_vals):
     moran_vals = {}
     # Project to UTM for distance calculation
