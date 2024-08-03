@@ -12,10 +12,23 @@ PROJECTS_GEO = "https://apps.mapswipe.org/api/projects/projects_geom.geojson"
 CACHE_PATH = "/Users/dsantin/Documents/Data Clinic/mapswipe-data"
 CACHE_SIZE = 100 * 1e9
 
+IGNORE_PROJECTS = (
+    "-MRL3frZWPOCR94ehFnp", # seems like a synthetic project, https://download.geoservice.dlr.de/WSF2019/
+)
+
 
 def read_raw_projects_list():
     with io.BytesIO(requests.get(PROJECTS_DATA).content) as b:
         return pd.read_csv(b)
+
+
+def read_scoped_projects_list():
+    df = read_raw_projects_list()
+    # validate projects only
+    df = df[df["project_type"] == 2]
+    # ignore outliers
+    df = df[~df["project_id"].isin(IGNORE_PROJECTS)]
+    return df
 
 
 def read_raw_full_results(project_code):
@@ -91,6 +104,9 @@ def augment_agg_results(gdf):
     gdf["modal_answer"] = gdf[['0_count', '1_count', '2_count', '3_count']].idxmax(axis=1)
     gdf["modal_answer"] = gdf["modal_answer"].replace(replacement_dict)
     gdf["yes_building"] = gdf["modal_answer"] == "1_count"
+
+    # TODO improve this logic beyond the yes share
+    gdf["correct_score"] = gdf["1_share"]
 
     return gdf
 
