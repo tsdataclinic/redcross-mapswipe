@@ -81,6 +81,13 @@ def calc_agreement(row: pd.Series) -> float:
     return agreement
 
 
+def calc_nearby_buildings(row: gpd.GeoSeries, all_centroids: gpd.GeoSeries, threshold_m: float) -> int:
+    # row and all_centroids must already be centroids
+    radius = row["centroid"].buffer(distance=threshold_m)
+    others = all_centroids[radius.contains(all_centroids)]
+    return len(others) - 1  # exclude itself
+
+
 AGG_DEFAULTS = {
     "osm_username": "",
     "lastEdit": None,
@@ -108,6 +115,17 @@ def augment_agg_results(gdf):
     # TODO improve this logic beyond the yes share
     gdf["correct_score"] = gdf["1_share"]
 
+    input_crs = gdf.crs  # should be 4327
+    gdfp = gdf.to_crs(gdf.estimate_utm_crs())
+    gdfp["centroid"] = gdfp.centroid
+    gdfp["nearby_building_count"] = gdfp.apply(
+        calc_nearby_buildings, 
+        axis=1, 
+        all_centroids=gdfp["centroid"],
+        threshold_m=100.0,
+    )
+    gdf = gdfp.to_crs(input_crs).drop("centroid", axis=1)
+    
     return gdf
 
 
