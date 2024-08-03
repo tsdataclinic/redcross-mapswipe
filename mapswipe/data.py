@@ -115,8 +115,10 @@ def augment_agg_results(gdf):
     # TODO improve this logic beyond the yes share
     gdf["correct_score"] = gdf["1_share"]
 
+    # Calculate projected measures
     input_crs = gdf.crs  # should be 4327
     gdfp = gdf.to_crs(gdf.estimate_utm_crs())
+
     gdfp["centroid"] = gdfp.centroid
     gdfp["nearby_building_count"] = gdfp.apply(
         calc_nearby_buildings, 
@@ -124,8 +126,12 @@ def augment_agg_results(gdf):
         all_centroids=gdfp["centroid"],
         threshold_m=100.0,
     )
-    gdf = gdfp.to_crs(input_crs).drop("centroid", axis=1)
+    gdfp = gdfp.drop("centroid", axis=1)
+
+    gdfp["building_area_m2"] = gdfp.geometry.area
     
+    gdf = gdfp.to_crs(input_crs)
+
     return gdf
 
 
