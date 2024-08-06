@@ -14,6 +14,14 @@ CACHE_SIZE = 100 * 1e9
 
 IGNORE_PROJECTS = (
     "-MRL3frZWPOCR94ehFnp", # seems like a synthetic project, https://download.geoservice.dlr.de/WSF2019/
+    # These don't load for some reason
+    "-NcESqSR6b0xA_FcPEwx",
+    "-NcET8HgshJ837e4jS8r",
+    "-NcETS2YIThvPut0CsZt",
+    "-N0b1pvuEOrIrMfH6KnW",
+    "-N6P-QAtJ7HO4Vwfr8OL",
+    "-MxuPfkJp-w83wt2LT0v",
+    "-NAtRt8B99CmTn9H0oKO",
 )
 
 
@@ -28,6 +36,8 @@ def read_scoped_projects_list():
     df = df[df["project_type"] == 2]
     # ignore outliers
     df = df[~df["project_id"].isin(IGNORE_PROJECTS)]
+    # only finished
+    df = df[df["status"] == "finished"]
     return df
 
 
