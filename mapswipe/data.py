@@ -123,7 +123,7 @@ def augment_agg_results(gdf):
     gdf["yes_building"] = gdf["modal_answer"] == "1_count"
 
     # TODO improve this logic beyond the yes share
-    gdf["correct_score"] = gdf["1_share"]
+    gdf["incorrect_score"] = 1 - gdf["1_share"]
 
     # Calculate projected measures
     input_crs = gdf.crs  # should be 4327
