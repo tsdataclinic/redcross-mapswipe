@@ -35,7 +35,11 @@ jobs:
     - name: Commit and push changes
       run: |
         git add data/
-        git commit -m "Update data on $(date +'%Y-%m-%d')"
-        git push
+        if git diff-index --quiet HEAD --; then
+          echo "No changes to commit"
+        else
+          git commit -m "Update data on $(date +'%Y-%m-%d')"
+          git push
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
