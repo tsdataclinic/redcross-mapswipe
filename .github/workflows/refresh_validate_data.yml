@@ -1,6 +1,7 @@
 name: Refresh Validate Data
 
 on:
+  workflow_dipatch:
   schedule:
     - cron: "0 0 * * *"
 
