@@ -16,4 +16,7 @@ setup(
         "folium",
         "branca",
     ],
+    package_data={
+        "mapswipe.data": ["*.csv"],
+    },
 )

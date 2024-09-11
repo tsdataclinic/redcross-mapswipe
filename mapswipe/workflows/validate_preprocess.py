@@ -2,7 +2,7 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 
-from mapswipe.data import read_scoped_projects_list, read_raw_full_results
+from mapswipe.data_access import read_scoped_projects_list, read_raw_full_results
 
 # Github's ubuntu-latest only has 2 CPUs
 DOWNLOAD_PARALLELISM = 2
@@ -14,7 +14,7 @@ def get_validate_population_data():
     2. Filters down to the in-scope validate projects
     3. Calculates user metrics (including weights) across in-scope validate projects
 
-    Filtering criteria is available in mapswipe.data.read_scoped_projects_list
+    Filtering criteria is available in mapswipe.data_access.read_scoped_projects_list
 
     :return: tuple of (DataFrame of project summaries, DataFrame of user metrics)
     """
@@ -40,7 +40,7 @@ def get_validate_population_data():
 
 def main():
     print("Starting validate project data processing")
-    root_path="data"
+    root_path="mapswipe/data"
     df_projects, df_user_stats = get_validate_population_data()
     
     output_path = f"{root_path}/validate-project-summaries.csv"

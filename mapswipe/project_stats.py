@@ -2,7 +2,7 @@ import pandas as pd
 from pysal.explore import esda
 from pysal.lib import weights
 
-from mapswipe.data import get_project_data
+from mapswipe.data_access import get_project_data
 
 
 def calc_moran_for_dist_debug(gdf_agg, col_name, dist_val):
@@ -48,7 +48,7 @@ def calc_moran_for_knn(gdf_agg, col_name, k_vals=(1, 3, 5, 10, 15, 20, 25, 30)):
 
 
 # Example usage:
-# agree_k_func = partial(calc_moran_for_knn, col_name="correct_score", k_vals=(1, 2, 3, 5, 10, 15))
+# agree_k_func = partial(calc_moran_for_knn, col_name="incorrect_score", k_vals=(1, 2, 3, 5, 10, 15))
 # df_moran_agree = safe_calc_moran(project_id, agree_k_func)
 def safe_calc_moran(project_id, moran_func, raise_on_failure=False):
     data = get_project_data(project_id)
