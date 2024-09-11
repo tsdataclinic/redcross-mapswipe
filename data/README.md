@@ -1,0 +1,1 @@
+This directory contains pre-processed data across all validate projects, used in the project analysis workflow.
