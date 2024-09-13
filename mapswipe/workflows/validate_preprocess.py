@@ -35,6 +35,10 @@ def get_validate_population_data():
     df_user_stats["tenure_days"] = (df_user_stats["last_seen"] - df_user_stats["first_seen"]).apply(lambda x: x.days + 1)
     df_user_stats["user_weight"] = df_user_stats["involved_project_count"].apply(lambda x: max(1, np.log2(x)))
 
+    # Adjust for more stable outputs
+    df_projects = df_projects.drop(["idx"], axis=1).sort_values("project_id")
+    df_user_stats = df_user_stats.sort_values("user_id")
+
     return df_projects, df_user_stats
 
 
