@@ -15,6 +15,7 @@ setup(
         "diskcache",
         "folium",
         "branca",
+        "fiona>=1.10b2", # macos pcre2 import error
     ],
     package_data={
         "mapswipe.data": ["*.csv"],
