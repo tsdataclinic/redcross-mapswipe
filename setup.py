@@ -22,4 +22,5 @@ setup(
     package_data={
         "mapswipe.data": ["*.csv"],
     },
+    include_package_data=True,
 )
