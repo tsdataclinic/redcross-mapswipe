@@ -19,8 +19,8 @@ setup(
         "tqdm",
         "ipywidgets",
     ],
-    package_data={
-        "mapswipe.data": ["*.csv"],
-    },
+    # package_data={
+    #     "mapswipe.data": ["*.csv"],
+    # },
     include_package_data=True,
 )
