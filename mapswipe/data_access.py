@@ -1,3 +1,4 @@
+from importlib.resources import files, as_file
 import diskcache
 import io
 import geopandas as gpd
@@ -177,3 +178,13 @@ def get_project_data(project_id):
     data["agg"] = augment_agg_results(data["agg_raw"])
     del data["agg_raw"]
     return data
+
+
+def get_user_metrics(use_local_package=False):
+    if use_local_package:
+        with as_file(files("mapswipe.data").joinpath("user-metrics.csv")) as f:
+            return pd.read_csv(f)
+    else:
+        url = "https://raw.githubusercontent.com/tsdataclinic/redcross-mapswipe/refs/heads/main/mapswipe/data/user-metrics.csv"
+        print(f"Downloading {url}")
+        return pd.read_csv(url)

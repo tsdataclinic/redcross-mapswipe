@@ -1,4 +1,4 @@
-from importlib.resources import files, as_file
+
 import pandas as pd
 import numpy as np
 from pysal.explore import esda
@@ -6,7 +6,7 @@ from pysal.lib import weights
 from statsmodels.formula.api import ols
 from tqdm.notebook import tqdm
 
-from mapswipe.data_access import read_raw_full_results, read_raw_agg_results, augment_agg_results
+from mapswipe.data_access import read_raw_full_results, read_raw_agg_results, augment_agg_results, get_user_metrics
 
 
 #
@@ -36,10 +36,7 @@ HEX_VIZ_H3_RESOLUTION = 11
 
 _OFFSET_RESPONSE = 3
 
-
-def _get_user_metrics():
-    with as_file(files("mapswipe.data").joinpath("user-metrics.csv")) as f:
-        return pd.read_csv(f)
+_USE_PACKAGE_DATA = False
 
 
 def _get_project_agg_weighted(df_agg, df_full, df_user_metrics):
@@ -122,7 +119,7 @@ def _apply_user_weighting(vars):
     vars["df_agg_w"] = _get_project_agg_weighted(
         vars["df_agg"],
         vars["df_full_raw"],
-        _get_user_metrics(),
+        get_user_metrics(_USE_PACKAGE_DATA),
     )
     return vars
 
