@@ -1,2 +1,3 @@
-include mapswipe/data/*.py
-include mapswipe/data/*.csv
+include mapswipe/data/__init__.py
+include mapswipe/data/user-metrics.csv
+include mapswipe/data/validate-project-summaries.csv
