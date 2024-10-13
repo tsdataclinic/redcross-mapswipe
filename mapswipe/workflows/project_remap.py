@@ -1,17 +1,48 @@
 from importlib.resources import files, as_file
 import pandas as pd
 import numpy as np
+from pysal.explore import esda
+from pysal.lib import weights
+from statsmodels.formula.api import ols
+from tqdm.notebook import tqdm
+
+from mapswipe.data_access import read_raw_full_results, read_raw_agg_results, augment_agg_results
 
 
-OFFSET_RESPONSE = 3
+#
+# Workflow configuration
+# 
+
+# Neighbor distance in meters for calculating Local Moran's I
+MORAN_DISTANCE_METERS = 500.0
+
+# Dependent variable for calculating spatial correlation
+DEPENDENT_VAR = "adjusted_remap_score"
+
+# Mapping difficulty model features
+MODEL_FEATURES = [
+    "geom_segment_count",
+    "nearby_building_count_log",
+    "building_area_m2",
+    "aspect_ratio",
+    "coverage_ratio",
+]
+
+# H3 resolution level for hex-aggregated Moran's I quadrant visualization
+HEX_VIZ_H3_RESOLUTION = 11
 
 
-def get_user_metrics():
+# Internal logic
+
+_OFFSET_RESPONSE = 3
+
+
+def _get_user_metrics():
     with as_file(files("mapswipe.data").joinpath("user-metrics.csv")) as f:
         return pd.read_csv(f)
 
 
-def get_project_agg_weighted(df_agg, df_full, df_user_metrics):
+def _get_project_agg_weighted(df_agg, df_full, df_user_metrics):
     # Suffix the unweighted measures with _uw and write the weighted measures in their place
     df_agg = df_agg.copy()
     df_agg = df_agg.rename((
@@ -24,8 +55,8 @@ def get_project_agg_weighted(df_agg, df_full, df_user_metrics):
     df_full_weight["user_weight"] = df_full_weight["user_weight"].fillna(1.0)
     df_task_weight = df_full_weight.groupby(["project_id", "task_id", "result"]).agg({"user_weight": "sum"}).round()
     df_agg_weight_share = df_task_weight.reset_index().pivot_table(values="user_weight", index=["project_id", "task_id"], columns="result", fill_value=0.0)
-    if OFFSET_RESPONSE not in df_agg_weight_share.columns:
-        df_agg_weight_share[OFFSET_RESPONSE] = 0.0
+    if _OFFSET_RESPONSE not in df_agg_weight_share.columns:
+        df_agg_weight_share[_OFFSET_RESPONSE] = 0.0
     w_count_cols = {i: f"{i}_count" for i in df_agg_weight_share.columns}
     df_agg_weight_share = df_agg_weight_share.rename(columns=w_count_cols)
     df_agg_weight_share["total_count"] = df_agg_weight_share[w_count_cols.values()].sum(axis=1)
@@ -47,3 +78,92 @@ def get_project_agg_weighted(df_agg, df_full, df_user_metrics):
         df_agg[f"remap_score{suffix}"] = df_agg[f"remap_score{suffix}"] / df_agg[f"remap_score{suffix}"].max()
 
     return df_agg
+
+
+def _moran_sig_quads(ser_tasks, lisa):
+    sig = 1 * (lisa.p_sim < 0.05)
+    spots = lisa.q * sig
+    return pd.Series(spots, index=ser_tasks)
+
+
+def _calc_moran_local_for_dist(gdf_agg, col_name, dist_vals):
+    moran_vals = {}
+    # Project to UTM for distance calculation
+    task_ids = gdf_agg["task_id"]
+    gdf = gdf_agg.to_crs(gdf_agg.estimate_utm_crs())
+    for dist in dist_vals:
+        w = weights.DistanceBand.from_dataframe(gdf, threshold=dist)
+        w.transform = "R"
+        moran = esda.moran.Moran_Local(gdf[col_name], w)
+        moran_vals[f"moran_quad_{int(dist)}m"] = _moran_sig_quads(task_ids, moran)
+    return pd.DataFrame(data=moran_vals, index=task_ids)
+
+
+
+
+
+# Workflow orchestration
+
+def _load_data(vars):
+    project_id = vars["project_id"]
+    df_agg_raw = read_raw_agg_results(project_id)
+    df_agg_raw["project_id"] = project_id
+    vars["df_agg_raw"] = df_agg_raw
+    vars["df_full_raw"] = read_raw_full_results(project_id)
+    return vars
+
+
+def _compute_features(vars):
+    vars["df_agg"] = augment_agg_results(vars["df_agg_raw"])
+    return vars
+
+
+def _apply_user_weighting(vars):
+    vars["df_agg_w"] = _get_project_agg_weighted(
+        vars["df_agg"],
+        vars["df_full_raw"],
+        _get_user_metrics(),
+    )
+    return vars
+
+
+def _calc_adjusted_remap_score(vars):
+    df_agg_w = vars["df_agg_w"]
+    df_ols = df_agg_w.copy()
+    # Center at the mean to improve interpretability of the intercept
+    df_ols[MODEL_FEATURES] = df_ols[MODEL_FEATURES] - df_ols[MODEL_FEATURES].mean()
+    model = ols("remap_score ~ " + " + ".join(MODEL_FEATURES), data=df_ols)
+    results = model.fit()
+    df_agg_w["adjusted_remap_score"] = results.resid
+    
+    vars["model"] = model
+    vars["model_results"] = results
+    return vars
+
+
+def _calc_spatial_correlation(vars):
+    df_agg_w = vars["df_agg_w"]
+    df_moran_local_w = _calc_moran_local_for_dist(df_agg_w, DEPENDENT_VAR, [MORAN_DISTANCE_METERS])
+    vars["df_agg_moran_w"] = df_agg_w.set_index("task_id").join(df_moran_local_w, how="inner").reset_index()
+    return vars
+
+
+_WORKFLOW_STEPS = (
+    (_load_data, "Loading project data"),
+    (_compute_features, "Computing spatial features"),
+    (_apply_user_weighting, "Applying user weighting to metrics"),
+    (_calc_adjusted_remap_score, "Adjusting remap_score for mapping difficulty"),
+    (_calc_spatial_correlation, "Calculating spatial correlation"),
+)
+
+
+def analyze_project(project_id):
+    """Run the analysis workflow steps in a notebook context."""
+    vars = {"project_id": project_id}
+    with tqdm(total=len(_WORKFLOW_STEPS), desc="Analyzing Project", unit="step") as pbar:
+        for func, step in _WORKFLOW_STEPS:
+            pbar.set_description(step)
+            vars = func(vars)
+            pbar.update(1)
+        pbar.set_description("Analysis complete")
+    return vars

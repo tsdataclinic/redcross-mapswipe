@@ -124,7 +124,7 @@ def augment_agg_results(gdf):
         if col not in gdf.columns:
             gdf[col] = default_val
 
-    gdf = gdf[['idx', 'task_id', '0_count', '1_count', '2_count', '3_count', '0_share', '1_share', '2_share', '3_share', 'total_count', "lastEdit", "osm_username", "geometry"]].copy()
+    gdf = gdf[['idx', 'project_id', 'task_id', '0_count', '1_count', '2_count', '3_count', '0_share', '1_share', '2_share', '3_share', 'total_count', "lastEdit", "osm_username", "geometry"]].copy()
 
     gdf["agreement"] = gdf[["total_count", '0_count', '1_count', '2_count', '3_count']].apply(calc_agreement, axis = 1)
 

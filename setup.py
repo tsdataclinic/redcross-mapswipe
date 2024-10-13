@@ -16,6 +16,8 @@ setup(
         "folium",
         "branca",
         "fiona>=1.10b2", # macos pcre2 import error
+        "tqdm",
+        "ipywidgets",
     ],
     package_data={
         "mapswipe.data": ["*.csv"],
