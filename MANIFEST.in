@@ -1,1 +1,2 @@
-graft mapswipe/data
+include mapswipe/data/*.py
+include mapswipe/data/*.csv
