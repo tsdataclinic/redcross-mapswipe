@@ -1,5 +1,6 @@
 from importlib.resources import files, as_file
 import pandas as pd
+import numpy as np
 
 
 OFFSET_RESPONSE = 3
@@ -32,7 +33,17 @@ def get_project_agg_weighted(df_agg, df_full, df_user_metrics):
         df_agg_weight_share[f"{i}_share"] = df_agg_weight_share[f"{i}_count"] / df_agg_weight_share["total_count"]
     df_agg = df_agg.set_index(["project_id", "task_id"]).join(df_agg_weight_share, how="left").reset_index()
 
-    # TODO improve this logic beyond the yes share
-    df_agg["incorrect_score"] = 1 - df_agg["1_share"]
+    # Calculate the weighted and unweighted remap score for each row
+    category_weights = {
+        "0": 0.6,
+        "2": 0.3,
+        "3": 0.1,
+    }
+    for suffix in ("", "_uw"):
+        df_agg[f"remap_score{suffix}"] = np.sum(
+            (df_agg[[f"{c}_count{suffix}" for c in category_weights.keys()]] * np.array(list(category_weights.values()))),
+            axis=1,
+        ) / df_agg[f"total_count{suffix}"]
+        df_agg[f"remap_score{suffix}"] = df_agg[f"remap_score{suffix}"] / df_agg[f"remap_score{suffix}"].max()
 
     return df_agg

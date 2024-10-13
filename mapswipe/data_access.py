@@ -2,6 +2,7 @@ import diskcache
 import io
 import geopandas as gpd
 import gzip
+import numpy as np
 import pandas as pd
 import requests
 
@@ -98,6 +99,17 @@ def calc_nearby_buildings(row: gpd.GeoSeries, all_centroids: gpd.GeoSeries, thre
     return len(others) - 1  # exclude itself
 
 
+def count_polygon_segments(geometry):
+    if geometry.geom_type == 'Polygon':
+        exterior_segments = len(geometry.exterior.coords) - 1
+        interior_segments = sum(len(interior.coords) - 1 for interior in geometry.interiors)
+        return exterior_segments + interior_segments
+    elif geometry.geom_type == 'MultiPolygon':
+        return sum(count_polygon_segments(polygon) for polygon in geometry.geoms)
+    else:
+        return 0  # Not a polygon
+
+
 AGG_DEFAULTS = {
     "osm_username": "",
     "lastEdit": None,
@@ -122,8 +134,7 @@ def augment_agg_results(gdf):
     gdf["modal_answer"] = gdf["modal_answer"].replace(replacement_dict)
     gdf["yes_building"] = gdf["modal_answer"] == "1_count"
 
-    # TODO improve this logic beyond the yes share
-    gdf["incorrect_score"] = 1 - gdf["1_share"]
+    gdf["geom_segment_count"] = gdf["geometry"].apply(count_polygon_segments)
 
     # Calculate projected measures
     input_crs = gdf.crs  # should be 4327
@@ -134,11 +145,20 @@ def augment_agg_results(gdf):
         calc_nearby_buildings, 
         axis=1, 
         all_centroids=gdfp["centroid"],
-        threshold_m=100.0,
+        threshold_m=500.0,
     )
+    gdfp["nearby_building_count_log"] = gdfp["nearby_building_count"].apply(lambda x: max(0, np.log10(x)))
     gdfp = gdfp.drop("centroid", axis=1)
 
     gdfp["building_area_m2"] = gdfp.geometry.area
+
+    b = gdfp.geometry.bounds
+    dims = ["x", "y"]
+    for dim in dims:
+        b[dim] = b[f"max{dim}"] - b[f"min{dim}"]
+    gdfp["aspect_ratio"] = b[dims].min(axis=1) / b[dims].max(axis=1)
+    gdfp["box_area_m2"] = b["x"] * b["y"]
+    gdfp["coverage_ratio"] = gdfp["building_area_m2"] / gdfp["box_area_m2"]
     
     gdf = gdfp.to_crs(input_crs)
 
