@@ -36,7 +36,7 @@ HEX_VIZ_H3_RESOLUTION = 11
 
 _OFFSET_RESPONSE = 3
 
-_USE_PACKAGE_DATA = False
+_USE_PACKAGE_DATA = True
 
 
 def _get_project_agg_weighted(df_agg, df_full, df_user_metrics):
