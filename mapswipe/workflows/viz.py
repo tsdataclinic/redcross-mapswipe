@@ -119,7 +119,7 @@ def create_moran_quad_hex_map(gdf_agg, mode_col, value_cols, h3_resolution):
 
     # Define hexagons
     def latlon_to_hexagon(row, resolution):
-        return h3.geo_to_h3(row.geometry.y, row.geometry.x, resolution)
+        return h3.geo_to_h3shape(row.geometry.y, row.geometry.x, resolution)
 
     gdf['hexagon'] = gdf.apply(latlon_to_hexagon, resolution=h3_resolution, axis=1)
 
