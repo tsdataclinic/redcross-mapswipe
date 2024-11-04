@@ -1,5 +1,4 @@
 import os
-from mapswipe.utils import utils
 import geopandas as gpd
 import gzip
 from io import BytesIO
