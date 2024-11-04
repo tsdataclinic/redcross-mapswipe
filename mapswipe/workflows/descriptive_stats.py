@@ -177,4 +177,18 @@ def make_outputs(project_code):
     markdown_text = f"### Total number of tasks: {total_tasks}"
     out_dict["total_tasks"] = Markdown(markdown_text)
 
+    p_counts = (ggplot(task_gdf, aes(x = "total_count")) + geom_histogram(binwidth = 1) + labs(x = "Number of responses", y = "Number of tasks"))
+    out_dict["figure_task_counts"] = p_counts
+
+    p_tasks_by_year = (ggplot(task_gdf, aes(x = "year")) + geom_histogram(binwidth = 1) + labs(x = "Year of addition to OSM", y = "Number of tasks"))
+    out_dict["figure_task_years"] = p_tasks_by_year
+
+    results = read_full_results(project_code)
+    results = results.merge(task_gdf[["task_id", "year"]])
+
+    p_response_types = (ggplot(task_gdf, aes(x = "modal_answer")) + geom_bar() + labs(x = "Most frequent task response", y = "Number of tasks") + scale_x_discrete(labels = {"0_count" : "No building", "1_count" : "Building", "2_count" : "Unsure", "3_count" : "Offset"}))
+    out_dict["figure_response_types"] = p_response_types
+
+    p_responses_year = (ggplot(results, aes(x = "year", fill = "result")) + geom_bar() + scale_fill_discrete(name = "Response") + labs(x = "Year of addition to OSM", y = "Number of responses"))
+    out_dict["figure_responses_year"] = p_responses_year
     return out_dict
