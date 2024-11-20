@@ -62,7 +62,7 @@ class Legend(MacroElement):
 
 
 
-def create_moran_quad_map(gdf_agg, color_col, value_cols, center_pt=None, add_moran_legend=True):
+def create_moran_quad_map(gdf_agg, color_col, value_cols, center_pt=None, include_legend=True):
     gdf = gdf_agg.copy()
 
     geojson_data = gdf.drop('lastEdit', axis=1).to_json()
@@ -107,13 +107,13 @@ def create_moran_quad_map(gdf_agg, color_col, value_cols, center_pt=None, add_mo
         name="geojson"
     ).add_to(map)
 
-    if add_moran_legend:
+    if include_legend:
         map.get_root().add_child(Legend(dict(enumerate(_LISA_COLORS)), "Local Moran Quadrant"))
 
     return map
 
 
-def create_moran_quad_hex_map(gdf_agg, mode_col, value_cols, h3_resolution):
+def create_moran_quad_hex_map(gdf_agg, mode_col, value_cols, h3_resolution, include_legend=True):
     gdf = gdf_agg.copy(deep = True)
     gdf["geometry"] = gdf.centroid
 
@@ -178,8 +178,8 @@ def create_moran_quad_hex_map(gdf_agg, mode_col, value_cols, h3_resolution):
         tooltip=tooltip
     ).add_to(m)
 
-    # Add the legend
-    m.get_root().add_child(Legend(dict(enumerate(_LISA_COLORS)), "Local Moran Quadrant"))
+    if include_legend:
+        m.get_root().add_child(Legend(dict(enumerate(_LISA_COLORS)), "Local Moran Quadrant"))
 
     m._repr_html_ = lambda: m._parent._repr_html_(
         include_link=False, width='75%', height='400px'

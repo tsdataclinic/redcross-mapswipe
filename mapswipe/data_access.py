@@ -5,6 +5,7 @@ import gzip
 import numpy as np
 import pandas as pd
 import requests
+from pysal.lib import weights
 
 PROJECTS_DATA = "https://apps.mapswipe.org/api/projects/projects.csv"
 PROJECTS_GEO = "https://apps.mapswipe.org/api/projects/projects_geom.geojson"
@@ -92,11 +93,14 @@ def calc_agreement(row: pd.Series) -> float:
     return agreement
 
 
-def calc_nearby_buildings(row: gpd.GeoSeries, all_centroids: gpd.GeoSeries, threshold_m: float) -> int:
-    # row and all_centroids must already be centroids
-    radius = row["centroid"].buffer(distance=threshold_m)
-    others = all_centroids[radius.contains(all_centroids)]
-    return len(others) - 1  # exclude itself
+def calc_nearby_buildings(gdfp: gpd.GeoDataFrame, threshold_m: float) -> pd.Series:
+    w = weights.DistanceBand.from_dataframe(
+        gdfp.set_geometry("centroid"),
+        threshold=threshold_m,
+        binary=True,
+        silence_warnings=True,
+    )
+    return w.full()[0].sum(axis=0).astype(int)
 
 
 def count_polygon_segments(geometry):
@@ -141,12 +145,7 @@ def augment_agg_results(gdf):
     gdfp = gdf.to_crs(gdf.estimate_utm_crs())
 
     gdfp["centroid"] = gdfp.centroid
-    gdfp["nearby_building_count"] = gdfp.apply(
-        calc_nearby_buildings, 
-        axis=1, 
-        all_centroids=gdfp["centroid"],
-        threshold_m=500.0,
-    )
+    gdfp["nearby_building_count"] = calc_nearby_buildings(gdfp, threshold_m=500.0)
     gdfp["nearby_building_count_log"] = gdfp["nearby_building_count"].apply(lambda x: max(0, np.log10(x)))
     gdfp = gdfp.drop("centroid", axis=1)
 
