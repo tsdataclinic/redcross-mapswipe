@@ -4,6 +4,7 @@ from shapely.geometry import Polygon
 import geopandas as gpd
 from folium.features import GeoJsonTooltip
 from typing import Iterable
+import branca.colormap as cm
 from branca.element import MacroElement
 from jinja2 import Template
 
@@ -186,3 +187,61 @@ def create_moran_quad_hex_map(gdf_agg, mode_col, value_cols, h3_resolution, incl
     )
     
     return m
+
+
+def create_task_map(gdf_agg, color_col, value_cols, col_descs, center_pt=None):
+    gdf = gdf_agg.copy()
+
+    geojson_data = gdf.drop('lastEdit', axis=1).to_json()
+
+    if center_pt is None:
+        center_pt = gdf.to_crs(gdf.estimate_utm_crs()).dissolve().centroid.to_crs(4326)
+
+    map = folium.Map(tiles=_MAP_TILE_PROVIDER, location=[center_pt.y, center_pt.x], zoom_start=STARTING_ZOOM_LEVEL)
+    map._repr_html_ = lambda: map._parent._repr_html_(
+        include_link=False, width='75%', height='400px'
+    )
+
+    if color_col not in value_cols:
+        value_cols = list(value_cols) + [color_col]
+
+    def _get_desc(col_name):
+        if col_name in col_descs:
+            return col_descs[col_name]
+        return f"{col_name} Value"
+
+    tooltip = GeoJsonTooltip(
+        fields=[v for v in value_cols],
+        aliases=[_get_desc(c) for c in value_cols],
+        localize=True,
+        sticky=False,
+        labels=True,
+        style="""
+            background-color: #F0EFEF;
+            border: 2px solid black;
+            border-radius: 3px;
+            box-shadow: 3px;
+        """,
+        max_width=800,
+    )
+
+    colormap = cm.linear.YlOrRd_09.scale(gdf[color_col].min(), gdf[color_col].max())
+
+    def style_function(feature):
+        return {
+            "fillColor": colormap(feature["properties"][color_col]),
+            "color": "black",
+            "weight": 0.25,
+            "fillOpacity": 0.7,
+            "lineOpacity": 0.2,
+        }
+
+    folium.GeoJson(
+        geojson_data,
+        columns=[color_col],
+        style_function=style_function,
+        tooltip=tooltip,
+        name="geojson"
+    ).add_to(map)
+
+    return map

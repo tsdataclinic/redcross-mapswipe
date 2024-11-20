@@ -147,6 +147,15 @@ def _calc_spatial_correlation(vars):
     vars["df_agg_moran_w"] = df_agg_w.set_index("task_id").join(df_moran_local_w, how="inner").reset_index()
     return vars
 
+def _calc_average_remap_score(vars):
+    df_agg_moran_w = vars["df_agg_moran_w"]
+    vars["df_avg_remap"] = pd.DataFrame(
+        df_agg_moran_w[["remap_score_uw", "remap_score"]]
+        .rename({"remap_score_uw": "Unweighted Remap Score", "remap_score": "User-Weighted Remap Score"}, axis=1)
+        .mean()
+    ).T.rename({0: "Average Value"})
+    return vars
+
 
 _WORKFLOW_STEPS = (
     (_load_data, "Loading project data"),
@@ -154,6 +163,7 @@ _WORKFLOW_STEPS = (
     (_apply_user_weighting, "Applying user weighting to metrics"),
     (_calc_adjusted_remap_score, "Adjusting remap_score for mapping difficulty"),
     (_calc_spatial_correlation, "Calculating spatial correlation"),
+    (_calc_average_remap_score, "Calculating average remap scores"),
 )
 
 
