@@ -32,6 +32,18 @@ MODEL_FEATURES = [
 HEX_VIZ_H3_RESOLUTION = 11
 
 
+# Acceptable threshold types and max value validation
+THRESHOLD_TYPES = {
+    "Top N Tasks": lambda df: len(df),
+    "Top N% of Tasks": lambda _: 100,
+    "Tasks With >=N remap_score": lambda _: 1.0,
+}
+
+
+# Remap selection column name
+SELECTION_COL = "_selected"
+
+
 # Internal logic
 
 _OFFSET_RESPONSE = 3
@@ -177,3 +189,23 @@ def analyze_project(project_id):
             pbar.update(1)
         pbar.set_description("Analysis complete")
     return vars
+
+
+def _validate_threshold_args(gdf, threshold_n, threshold_type):
+    if threshold_type not in THRESHOLD_TYPES:
+        raise ValueError(f"Unsupported threshold type '{threshold_type}'")
+    max_val = THRESHOLD_TYPES[threshold_type](gdf)
+    if not (0 <= threshold_n <= max_val):
+        raise ValueError(f"Threshold type '{threshold_type}' must be between 0 and {max_val}")
+
+
+def apply_threshold_filter(gdf, threshold_n, threshold_type, selection_col):
+    _validate_threshold_args(gdf, threshold_n, threshold_type)
+    gdf = gdf.sort_values("remap_score").copy()
+    if threshold_type == "Top N% of Tasks":
+        threshold_n = int(len(gdf) * (threshold_n / 100.0))
+    elif threshold_type == "Tasks With >=N remap_score":
+        threshold_n = int(len(gdf[gdf["remap_score"] >= threshold_n]))
+    gdf[selection_col] = 0.0
+    gdf[selection_col].iloc[-threshold_n:] = 1.0
+    return gdf

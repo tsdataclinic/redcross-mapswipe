@@ -189,13 +189,15 @@ def create_moran_quad_hex_map(gdf_agg, mode_col, value_cols, h3_resolution, incl
     return m
 
 
-def create_task_map(gdf_agg, color_col, value_cols, col_descs, center_pt=None):
+def create_task_map(gdf_agg, color_col, value_cols, col_descs, selection_col=None, center_pt=None, color_bounds=None):
     gdf = gdf_agg.copy()
 
     geojson_data = gdf.drop('lastEdit', axis=1).to_json()
 
     if center_pt is None:
         center_pt = gdf.to_crs(gdf.estimate_utm_crs()).dissolve().centroid.to_crs(4326)
+    if color_bounds is None:
+        color_bounds = (gdf[color_col].min(), gdf[color_col].max())
 
     map = folium.Map(tiles=_MAP_TILE_PROVIDER, location=[center_pt.y, center_pt.x], zoom_start=STARTING_ZOOM_LEVEL)
     map._repr_html_ = lambda: map._parent._repr_html_(
@@ -225,15 +227,20 @@ def create_task_map(gdf_agg, color_col, value_cols, col_descs, center_pt=None):
         max_width=800,
     )
 
-    colormap = cm.linear.YlOrRd_09.scale(gdf[color_col].min(), gdf[color_col].max())
+    colormap = cm.linear.YlOrRd_09.scale(color_bounds[0], color_bounds[1])
 
     def style_function(feature):
+        fill_opacity = 0.7
+        line_opacity = 0.2
+        if selection_col and not feature["properties"][selection_col]:
+            fill_opacity = 0.01
+            line_opacity = 0.01
         return {
             "fillColor": colormap(feature["properties"][color_col]),
             "color": "black",
             "weight": 0.25,
-            "fillOpacity": 0.7,
-            "lineOpacity": 0.2,
+            "fillOpacity": fill_opacity,
+            "lineOpacity": line_opacity,
         }
 
     folium.GeoJson(
