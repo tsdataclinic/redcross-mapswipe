@@ -1,4 +1,5 @@
 from importlib.resources import files, as_file
+import math
 import pandas as pd
 import numpy as np
 from pysal.explore import esda
@@ -209,3 +210,17 @@ def apply_threshold_filter(gdf, threshold_n, threshold_type, selection_col):
     gdf[selection_col] = 0.0
     gdf[selection_col].iloc[-threshold_n:] = 1.0
     return gdf
+
+
+def generate_maproulette_shapefiles(gdf, project_id, file_size=10**6):
+    task_size = len(gdf.set_index("task_id")["geometry"].head(10).to_json()) // 10
+    chunk_size = file_size // task_size
+    gdf = gdf.set_index("task_id")
+    chunks = [gdf.iloc[i:i + chunk_size] for i in range(0, len(gdf), chunk_size)]
+    files = []
+    for idx, gdf_chunk in enumerate(chunks, start=1):
+        file_name = f"remap_maproulette_{project_id}_file{idx}of{len(chunks)}.geojson"
+        with open(file_name, "w", encoding="utf8") as f:
+            f.write(gdf_chunk["geometry"].to_json())
+        files.append(file_name)
+    return files
